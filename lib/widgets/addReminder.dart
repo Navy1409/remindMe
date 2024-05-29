@@ -69,16 +69,18 @@ Future<void> addReminder(
               SizedBox(
                 height: 10,
               ),
+              Text("Add Description"),
               customField(textInputType: TextInputType.text, textEditingController: _descController,)
             ],
           ),
         ),
         actions: [
           TextButton(onPressed: (){
+            add(uid, time, _titleController.text, _descController.text);
             Navigator.pop(context);
-          }, child: Text("Cancel")),
+          }, child: Text("OK")),
           TextButton(onPressed: (){
-            add(uid, time, _descController.text, _titleController.text);
+            Navigator.pop(context);
           }, child: Text("Cancel")),
         ],
       );

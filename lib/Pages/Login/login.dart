@@ -18,7 +18,6 @@ class _loginScreenState extends State<loginScreen> {
 
   final TextEditingController _emailcontroller = TextEditingController();
   final TextEditingController _passController = TextEditingController();
-  bool _isObsecur = true;
   final _formKey = GlobalKey<FormState>();
 
   Future<User?> _signIn(
