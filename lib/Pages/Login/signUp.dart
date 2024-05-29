@@ -1,42 +1,25 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:remindme/Pages/home.dart';
 import 'package:remindme/utility/appColor.dart';
 import 'package:remindme/widgets/customButton.dart';
 import 'package:remindme/widgets/customfield.dart';
-import 'signUp.dart';
 
-class loginScreen extends StatefulWidget {
-  const loginScreen({super.key});
+class signUp extends StatefulWidget {
+  const signUp({super.key});
 
   @override
-  State<loginScreen> createState() => _loginScreenState();
+  State<signUp> createState() => _signUpState();
 }
 
-class _loginScreenState extends State<loginScreen> {
+class _signUpState extends State<signUp> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
+  CollectionReference _users= FirebaseFirestore.instance.collection("users");
   final TextEditingController _emailcontroller = TextEditingController();
+  final TextEditingController _namecontroller = TextEditingController();
   final TextEditingController _passController = TextEditingController();
-  bool _isObsecur = true;
   final _formKey = GlobalKey<FormState>();
-
-  Future<User?> _signIn(
-      BuildContext context, String email, String password) async {
-    try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-          email: email, password: password);
-
-      User? user = userCredential.user;
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => Home()));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login failed")),
-      );
-      return null;
-    }
-  }
 
   @override
   void initState() {
@@ -64,12 +47,32 @@ class _loginScreenState extends State<loginScreen> {
                           width: media.width,
                           alignment: Alignment.center,
                           child: Text(
-                            "Login",
+                            "Create an Account",
                             style: TextStyle(color: appColors.blackColor, fontSize: 20),
                           ),
                         ),
                         SizedBox(
                           height: media.height * 0.1,
+                        ),
+                        Container(
+                          margin: EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            "Name",
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        customField(
+                          textEditingController: _namecontroller,
+                          textInputType: TextInputType.name,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Please enter Name";
+                            }
+                            return null;
+                          },
+                        ),
+                        SizedBox(
+                          height: media.height * 0.02,
                         ),
                         Container(
                           margin: EdgeInsets.symmetric(horizontal: 20),
@@ -146,9 +149,22 @@ class _loginScreenState extends State<loginScreen> {
                         SizedBox(
                           height: media.height*0.03,
                         ),
-                        customButton(title: "Login", onPressed: (){
+                        customButton(title: "Create Account", onPressed: () async {
                           if(_formKey.currentState!.validate()){
-                            _signIn(context, _emailcontroller.text, _passController.text);
+                           try{
+                             UserCredential userCredential = await _auth.createUserWithEmailAndPassword(email: _emailcontroller.text, password:_passController.text);
+                             String uid= userCredential.user!.uid;
+                             await _users.doc(uid).set({
+                               'email':_emailcontroller.text,
+                               'name':_namecontroller.text,
+                             });
+                             Navigator.pushReplacement(
+                                 context, MaterialPageRoute(builder: (context) => Home()));
+                           }catch(e){
+                             ScaffoldMessenger.of(context).showSnackBar(
+                               SnackBar(content: Text(e.toString()))
+                             );
+                           }
                           }
                         })
                       ],

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:remindme/utility/appColor.dart';
 
@@ -14,14 +15,15 @@ class customField extends StatelessWidget {
       this.validator,
       this.onChanged,
       required this.textInputType,
-      required this.isObsecureText,
+      this.isObsecureText=false,
      });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: appColors.primaryColor2,
+        color: CupertinoColors.extraLightBackgroundGray,
         borderRadius: BorderRadius.circular(10)
       ),
       child: TextFormField(
