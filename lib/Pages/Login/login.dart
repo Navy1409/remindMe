@@ -127,19 +127,6 @@ class _loginScreenState extends State<loginScreen> {
                                         fontWeight: FontWeight.bold),
                                   ),
                                 )),
-                            Container(
-                                margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () {},
-                                  child: Text(
-                                    "Forgot your Password?",
-                                    style: TextStyle(
-                                        color: Colors.blueAccent,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                )),
                           ],
                         ),
                         SizedBox(

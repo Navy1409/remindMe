@@ -6,6 +6,8 @@ import 'package:remindme/Pages/Login/login.dart';
 import 'package:remindme/services/notificationLogic.dart';
 import 'package:remindme/utility/appColor.dart';
 import 'package:remindme/widgets/addReminder.dart';
+import 'package:remindme/widgets/deleteReminder.dart';
+import 'package:remindme/widgets/editReminder.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -27,6 +29,7 @@ class _HomeState extends State<Home> {
       listenNotification();
       _fetchUserData();
     }
+    // _checkAndDeleteExpiredReminders();
   }
 
   void listenNotification() {
@@ -35,6 +38,33 @@ class _HomeState extends State<Home> {
       onClickedNotification(value);
     });
   }
+
+  // Future<void> _deleteExpiredReminders(String uid) async {
+  //   try {
+  //     QuerySnapshot snapshot = await FirebaseFirestore.instance
+  //         .collection("users")
+  //         .doc(uid)
+  //         .collection("reminders")
+  //         .where("timestamp", isLessThan: DateTime.now())
+  //         .get();
+  //
+  //     for (DocumentSnapshot doc in snapshot.docs) {
+  //       await doc.reference.delete();
+  //     }
+  //   } catch (e) {
+  //     print("Error deleting expired reminders: $e");
+  //   }
+  // }
+  //
+  // void _checkAndDeleteExpiredReminders() {
+  //   // Get current user UID
+  //   String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  //
+  //   // Check and delete expired reminders
+  //   if (uid.isNotEmpty) {
+  //     _deleteExpiredReminders(uid);
+  //   }
+  // }
 
   void onClickedNotification(String? payload) {
     Navigator.pushReplacement(
@@ -59,6 +89,24 @@ class _HomeState extends State<Home> {
         debugPrint('Error fetching user data: $e');
       }
     }
+  }
+
+  Future<void> _editReminder(String uid, String reminderId) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return EditReminder(uid: uid, reminderId: reminderId);
+      },
+    );
+  }
+
+  Future<void> _deleteReminder(String uid, String reminderId) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return DeleteReminder(uid: uid, reminderId: reminderId);
+      },
+    );
   }
 
   @override
@@ -90,7 +138,7 @@ class _HomeState extends State<Home> {
         stream: FirebaseFirestore.instance
             .collection("users")
             .doc(user?.uid)
-            .collection("reminder")
+            .collection("reminders")
             .snapshots(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -115,18 +163,22 @@ class _HomeState extends State<Home> {
             itemCount: data.docs.length,
             itemBuilder: (context, index) {
               DocumentSnapshot doc = data.docs[index];
-              Timestamp t = doc['time'];
+              String reminderId = doc.id;
+              Timestamp t = doc['timestamp'];
               String title = doc['title'];
               String desc = doc['desc'];
               DateTime date = t.toDate();
               String formattedTime = DateFormat.jm().format(date);
 
-              Notificationlogic.showNotification(
-                dateTime: date,
-                id: 0,
-                title: "Reminder",
-                body: title,
-              );
+              // Schedule the notification only once and ensure it's done correctly
+              if (DateTime.now().isBefore(date)) {
+                Notificationlogic.showNotification(
+                  dateTime: date,
+                  id: index,
+                  title: "Reminder",
+                  body: title,
+                );
+              }
 
               return Padding(
                 padding: EdgeInsets.all(10),
@@ -159,6 +211,23 @@ class _HomeState extends State<Home> {
                             fontSize: 20,
                             fontWeight: FontWeight.w300,
                           ),
+                        ),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.edit, color: appColors.blackColor),
+                          onPressed: () async {
+                            await _editReminder(user!.uid, reminderId);
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete, color: appColors.blackColor),
+                          onPressed: () async {
+                            await _deleteReminder(user!.uid, reminderId);
+                          },
                         ),
                       ],
                     ),

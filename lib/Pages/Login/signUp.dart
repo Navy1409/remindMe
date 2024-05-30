@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:remindme/Pages/Login/login.dart';
 import 'package:remindme/Pages/home.dart';
 import 'package:remindme/utility/appColor.dart';
 import 'package:remindme/widgets/customButton.dart';
@@ -121,23 +122,10 @@ class _signUpState extends State<signUp> {
                                 child: TextButton(
                                   onPressed: () {
                                     Navigator.pushReplacement(
-                                        context, MaterialPageRoute(builder: (context) => signUp()));
+                                        context, MaterialPageRoute(builder: (context) => loginScreen()));
                                   },
                                   child: Text(
-                                    "New User?",
-                                    style: TextStyle(
-                                        color: Colors.blueAccent,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                )),
-                            Container(
-                                margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () {},
-                                  child: Text(
-                                    "Forgot your Password?",
+                                    "Already a user?",
                                     style: TextStyle(
                                         color: Colors.blueAccent,
                                         fontSize: 15,

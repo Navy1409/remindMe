@@ -1,26 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:remindme/model/reminder.dart';
+import 'package:intl/intl.dart';
 import 'package:remindme/utility/appColor.dart';
-import 'package:remindme/widgets/customfield.dart';
 
 class EditReminder extends StatefulWidget {
   final String uid;
   final String reminderId;
 
-  EditReminder({required this.uid, required this.reminderId});
+  const EditReminder({required this.uid, required this.reminderId, Key? key}) : super(key: key);
 
   @override
   _EditReminderState createState() => _EditReminderState();
 }
 
 class _EditReminderState extends State<EditReminder> {
-  TextEditingController _titleController = TextEditingController();
-  TextEditingController _descController = TextEditingController();
-  TimeOfDay? _time;
-  bool _loading = true;
+  final _formKey = GlobalKey<FormState>();
+  String _title = '';
+  String _desc = '';
+  DateTime? _selectedDateTime;
 
   @override
   void initState() {
@@ -36,114 +33,119 @@ class _EditReminderState extends State<EditReminder> {
           .collection('reminders')
           .doc(widget.reminderId)
           .get();
-      ReminderModel reminder = ReminderModel.fromMap(doc.data() as Map<String, dynamic>);
-      DateTime dateTime = reminder.timestamp!.toDate();
-      setState(() {
-        _titleController.text = reminder.title ?? '';
-        _descController.text = reminder.desc ?? '';
-        _time = TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
-        _loading = false;
-      });
+
+      if (doc.exists) {
+        setState(() {
+          _title = doc['title'] ?? '';
+          _desc = doc['desc'] ?? '';
+          _selectedDateTime = (doc['timestamp'] as Timestamp).toDate();
+        });
+      }
     } catch (e) {
-      Fluttertoast.showToast(msg: e.toString());
-      Navigator.pop(context);
+      debugPrint('Error fetching reminder data: $e');
     }
   }
 
   Future<void> _updateReminder() async {
-    try {
-      DateTime now = DateTime.now();
-      DateTime dateTime = DateTime(now.year, now.month, now.day, _time!.hour, _time!.minute);
-      Timestamp timestamp = Timestamp.fromDate(dateTime);
+    if (_formKey.currentState?.validate() ?? false) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.uid)
+            .collection('reminders')
+            .doc(widget.reminderId)
+            .update({
+          'title': _title,
+          'desc': _desc,
+          'timestamp': _selectedDateTime,
+        });
 
-      ReminderModel reminderModel = ReminderModel(
-        timestamp: timestamp,
-        desc: _descController.text.trim(),
-        title: _titleController.text.trim(),
+        Navigator.of(context).pop();
+      } catch (e) {
+        debugPrint('Error updating reminder: $e');
+      }
+    }
+  }
+
+  Future<void> _selectDateTime() async {
+    DateTime initialDate = _selectedDateTime ?? DateTime.now();
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(initialDate),
       );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.uid)
-          .collection('reminders')
-          .doc(widget.reminderId)
-          .update(reminderModel.toMap());
-
-      Fluttertoast.showToast(msg: "Reminder updated successfully");
-      Navigator.pop(context);
-    } catch (e) {
-      Fluttertoast.showToast(msg: e.toString());
+      if (pickedTime != null) {
+        setState(() {
+          _selectedDateTime = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Edit Reminder"),
-      ),
-      body: _loading
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Text("Select Time"),
-              SizedBox(height: 20),
-              MaterialButton(
-                onPressed: () async {
-                  TimeOfDay? newTime = await showTimePicker(
-                    context: context,
-                    initialTime: _time ?? TimeOfDay.now(),
-                  );
-                  if (newTime == null) return;
-                  setState(() {
-                    _time = newTime;
-                  });
-                },
-                child: Row(
-                  children: [
-                    FaIcon(
-                      FontAwesomeIcons.clock,
-                      color: appColors.primaryColor2,
-                      size: 40,
-                    ),
-                    SizedBox(width: 10),
-                    Text(
-                      _time?.format(context) ?? '',
-                      style: TextStyle(color: appColors.blackColor, fontSize: 30),
-                    ),
-                  ],
+    return AlertDialog(
+      title: Text('Edit Reminder'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              initialValue: _title,
+              decoration: InputDecoration(labelText: 'Title'),
+              onChanged: (value) => setState(() => _title = value),
+              validator: (value) => value!.isEmpty ? 'Title cannot be empty' : null,
+            ),
+            TextFormField(
+              initialValue: _desc,
+              decoration: InputDecoration(labelText: 'Description'),
+              onChanged: (value) => setState(() => _desc = value),
+              validator: (value) => value!.isEmpty ? 'Description cannot be empty' : null,
+            ),
+            SizedBox(height: 20),
+            InkWell(
+              onTap: _selectDateTime,
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Reminder Time',
+                  border: OutlineInputBorder(),
+                ),
+                baseStyle: TextStyle(fontSize: 16),
+                child: Text(
+                  _selectedDateTime != null
+                      ? DateFormat('yyyy-MM-dd – kk:mm').format(_selectedDateTime!)
+                      : 'Select Date & Time',
                 ),
               ),
-              SizedBox(height: 20),
-              Text("Add Title"),
-              customField(
-                textInputType: TextInputType.text,
-                textEditingController: _titleController,
-              ),
-              SizedBox(height: 10),
-              Text("Add Description"),
-              customField(
-                textInputType: TextInputType.text,
-                textEditingController: _descController,
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  if (_titleController.text.trim().isEmpty || _descController.text.trim().isEmpty) {
-                    Fluttertoast.showToast(msg: "Title and description cannot be empty");
-                    return;
-                  }
-                  _updateReminder();
-                },
-                child: Text("Update Reminder"),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancel', style: TextStyle(color: appColors.primaryColor1)),
+        ),
+        TextButton(
+          onPressed: _updateReminder,
+          child: Text('Save', style: TextStyle(color: appColors.primaryColor1)),
+        ),
+      ],
     );
   }
 }
